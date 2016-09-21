@@ -29,14 +29,9 @@ Configuration
 -------------
 
 ```scala
-PlayAutoRefreshKeys.jsPort := [number of port]
+PlayAutoRefreshKeys.port := [number of port]
 ```
 (if not set, defaults to 9999)
-
-```scala
-PlayAutoRefreshKeys.wsPort := [number of port]
-```
-(if not set, defaults to any port)
 
 ## License
 `sbt-play-auto-refresh` is licensed under the [Apache License, Version 2.0](https://github.com/stonexx/sbt-play-auto-refresh/blob/master/LICENSE)
