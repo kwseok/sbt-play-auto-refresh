@@ -5,8 +5,11 @@ import play.sbt.{Play, PlayRunHook}
 import sbt._
 import sbt.Keys._
 import unfiltered.netty._
+import unfiltered.netty.websockets.WebSocket
 import unfiltered.request.{GET, Path}
 import unfiltered.response.{ComposeResponse, JsContent, ResponseString}
+
+import scala.collection.mutable
 
 object SbtPlayAutoRefresh extends AutoPlugin {
 
@@ -16,17 +19,17 @@ object SbtPlayAutoRefresh extends AutoPlugin {
 
   object autoImport {
     object PlayAutoRefreshKeys {
-      val port = SettingKey[Int]("browser-notification-port")
+      val port: SettingKey[Int] = SettingKey[Int]("browser-notification-port")
     }
   }
 
   import autoImport.PlayAutoRefreshKeys._
 
-  val webSockets = collection.mutable.Set.empty[websockets.WebSocket]
+  val webSockets: mutable.Set[WebSocket] = collection.mutable.Set.empty[websockets.WebSocket]
 
-  val browserNotification = TaskKey[Unit]("browser-notification")
+  val browserNotification: TaskKey[Unit] = TaskKey[Unit]("browser-notification")
 
-  val browserNotificationTask = Def.task[Unit] {
+  val browserNotificationTask: Def.Initialize[Task[Unit]] = Def.task[Unit] {
     webSockets.foreach(_.send("reload"))
   }
 
@@ -45,7 +48,7 @@ object SbtPlayAutoRefresh extends AutoPlugin {
 
       def pass = DefaultPassHandler
 
-      def intent = {
+      def intent: websockets.Intent = {
         case GET(Path("/")) => {
           case Open(s) => webSockets += s
           case Close(s) => webSockets -= s
@@ -56,28 +59,30 @@ object SbtPlayAutoRefresh extends AutoPlugin {
 
     @io.netty.channel.ChannelHandler.Sharable
     object JSHandler extends cycle.Plan with cycle.SynchronousExecution with ServerErrorResponse {
-      def intent = {
+      def intent: cycle.Plan.Intent = {
         case GET(Path("/play-auto-refresh.js")) =>
           new ComposeResponse(JsContent ~> ResponseString(
             s"""
                |(function(window){
-               |  var Socket = "MozWebSocket" in window ? MozWebSocket : WebSocket;
-               |  var ws = new Socket("ws://localhost:$port/");
-               |  ws.onmessage = function(evt) {
-               |    switch (evt.data) {
-               |    case 'reload':
-               |      ws.close();
-               |      window.location.reload();
-               |      break;
-               |    }
-               |  };
-               |  window.__PLAY_AUTO_REFRESH_WS__ = ws
+               |  window.addEventListener('load', function() {
+               |    var Socket = "MozWebSocket" in window ? MozWebSocket : WebSocket;
+               |    var ws = new Socket("ws://localhost:9999/");
+               |    ws.onmessage = function(evt) {
+               |      switch (evt.data) {
+               |      case 'reload':
+               |        ws.close();
+               |        window.location.reload();
+               |        break;
+               |      }
+               |    };
+               |    window.__PLAY_AUTO_REFRESH_WS__ = ws
+               |  }, false)
                |})(window);
                |""".stripMargin))
       }
     }
 
-    lazy val server = Server.local(port).handler(JSHandler).handler(WSHandler)
+    lazy val server: Server = Server.local(port).handler(JSHandler).handler(WSHandler)
 
     override def afterStarted(addr: InetSocketAddress): Unit = {
       server.start()
