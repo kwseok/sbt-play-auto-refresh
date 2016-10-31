@@ -66,7 +66,7 @@ object SbtPlayAutoRefresh extends AutoPlugin {
                |(function(window){
                |  window.addEventListener('load', function() {
                |    var Socket = "MozWebSocket" in window ? MozWebSocket : WebSocket;
-               |    var ws = new Socket("ws://localhost:9999/");
+               |    var ws = new Socket("ws://localhost:$port/");
                |    ws.onmessage = function(evt) {
                |      switch (evt.data) {
                |      case 'reload':
